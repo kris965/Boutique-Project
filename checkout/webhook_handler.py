@@ -23,7 +23,7 @@ class StripeWH_Handler:
 
     def handle_payment_intent_succeeded(self, event):
         """
-        Handle the payment_intent.succeeded webhoob from Stripe
+        Handle the payment_intent.succeeded webhook from Stripe
         """
         intent = event.data.object
         pid = intent.id
@@ -31,8 +31,8 @@ class StripeWH_Handler:
         save_info = intent.metadata.save_info
 
         billing_details = intent.charges.data[0].billing_details
-        shipping_details = intent.shipping_details
-        grand_totals = round(intent.data.charges[0].amount / 100, 2)
+        shipping_details = intent.shipping
+        grand_total = round(intent.charges.data[0].amount / 100, 2)
 
         # Clean data in the shipping details
         for field, value in shipping_details.address.items():
@@ -44,16 +44,16 @@ class StripeWH_Handler:
         while attempt <= 5:
             try:
                 order = Order.objects.get(
-                    full_name_iexact=shipping_details.name,
-                    email_iexact=billing_details.email,
-                    phone_number_iexact=shipping_details.phone,
-                    country_iexact=shipping_details.address.country,
-                    postcode_iexact=shipping_details.address.postal_code,
-                    town_or_city_iexact=shipping_details.address.city,
-                    streetaddress1_iexact=shipping_details.address.line1,
-                    streetaddress2_iexact=shipping_details.address.line2,
-                    county_iexact=shipping_details.address.state,
-                    grand_total=shipping_details.name,
+                    full_name__iexact=shipping_details.name,
+                    email__iexact=billing_details.email,
+                    phone_number__iexact=shipping_details.phone,
+                    country__iexact=shipping_details.address.country,
+                    postcode__iexact=shipping_details.address.postal_code,
+                    town_or_city__iexact=shipping_details.address.city,
+                    street_address1__iexact=shipping_details.address.line1,
+                    street_address2__iexact=shipping_details.address.line2,
+                    county__iexact=shipping_details.address.state,
+                    grand_total=grand_total,
                     original_bag=bag,
                     stripe_pid=pid,
                 )
@@ -64,8 +64,8 @@ class StripeWH_Handler:
                 time.sleep(1)
         if order_exists:
             return HttpResponse(
-                content=f'Webhook received: {event["type"]} | SUCCES: Verified order already in database ',
-                status=200)  
+                content=f'Webhook received: {event["type"]} | SUCCESS: Verified order already in database',
+                status=200)
         else:
             order = None
             try:
@@ -76,8 +76,8 @@ class StripeWH_Handler:
                     country=shipping_details.address.country,
                     postcode=shipping_details.address.postal_code,
                     town_or_city=shipping_details.address.city,
-                    streetaddress1=shipping_details.address.line1,
-                    streetaddress2=shipping_details.address.line2,
+                    street_address1=shipping_details.address.line1,
+                    street_address2=shipping_details.address.line2,
                     county=shipping_details.address.state,
                     original_bag=bag,
                     stripe_pid=pid,
@@ -90,26 +90,25 @@ class StripeWH_Handler:
                             product=product,
                             quantity=item_data,
                         )
-                    order_line_item.save()
-                else:
-                    for size, quantity in item_data['items_by_size'].items():
-                        order_line_item = OrderLineItem(
-                            order=order,
-                            product=product,
-                            quantity=quantity,
-                            product_size=size,
-                        )
                         order_line_item.save()
+                    else:
+                        for size, quantity in item_data['items_by_size'].items():
+                            order_line_item = OrderLineItem(
+                                order=order,
+                                product=product,
+                                quantity=quantity,
+                                product_size=size,
+                            )
+                            order_line_item.save()
             except Exception as e:
-                    if order:
-                        order.delete()
-                    return HttpResponse(
-                        content=f'Webhook received: {event["type"]} | ERROR: {e}',
-                        status=500)
-
+                if order:
+                    order.delete()
+                return HttpResponse(
+                    content=f'Webhook received: {event["type"]} | ERROR: {e}',
+                    status=500)
         return HttpResponse(
-                content=f'Webhook received: {event["type"]} | SUCCESS: Created order in webhook',
-                status=200)
+            content=f'Webhook received: {event["type"]} | SUCCESS: Created order in webhook',
+            status=200)
 
     def handle_payment_intent_payment_failed(self, event):
         """
