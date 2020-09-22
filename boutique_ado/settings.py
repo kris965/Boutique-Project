@@ -179,6 +179,7 @@ if 'USE_AWS' in os.environ:
     AWS_ACCES_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCES_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
     AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+    AWS_S3_ADDRESSING_STYLE = "path"
 
     # Static and media files 
     STATICFILES_STORAGE = 'custom_storages.StaticStorage'
@@ -189,7 +190,7 @@ if 'USE_AWS' in os.environ:
     # Override static and media URL's in production
     STATIC_URL =  f'https://{AWS_S3_CUSTOM_DOMAIN}/{STATICFILES_LOCATION}'
     MEDIA_URL =  f'https://{AWS_S3_CUSTOM_DOMAIN}/{MEDIAFILES_LOCATION}'
-    
+
 # Stripe 
 FREE_DELIVERY_THRESHOLD = 50
 STANDARD_DELIVERY_PERCENTAGE = 10
